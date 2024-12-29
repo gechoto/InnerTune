@@ -18,7 +18,7 @@ jobs:
           cache: 'gradle'
 
       - name: Build debug APK and run jvm tests
-        run: ./gradlew assembleDebug lintFullDebug testFullDebugUnitTest --stacktrace -DskipFormatKtlint
+        run: ./gradlew assembleFossDebug lintFullDebug testFullDebugUnitTest --stacktrace -DskipFormatKtlint
         env:
           PULL_REQUEST: 'true'
 

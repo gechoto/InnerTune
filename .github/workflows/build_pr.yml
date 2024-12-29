@@ -48,5 +48,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app
+          name: app-foss
           path: app/build/outputs/apk/foss/debug/*.apk

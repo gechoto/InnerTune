@@ -24,6 +24,11 @@ object YouTubeUtils {
      */
     private val MAIN_CLIENT: YouTubeClient = WEB_REMIX
 
+    /**
+     * Clients used for fallback streams in case the streams of the main client do not work.
+     */
+    private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(WEB_CREATOR, IOS, TVHTML5)
+
     suspend fun playerResponseWithFormat(
         videoId: String,
         playlistId: String? = null,
@@ -35,23 +40,13 @@ object YouTubeUtils {
             YouTube.player(videoId, playlistId, client = MAIN_CLIENT).getOrThrow()
 
         var streamPlayerResponse: PlayerResponse? = null
-        if (YouTube.cookie != null) { // if logged in: try WEB_CREATOR client first because IOS client does not support login
+
+        for (client in STREAM_FALLBACK_CLIENTS) {
             val playerResponse =
-                YouTube.player(videoId, playlistId, client = WEB_CREATOR).getOrNull()
+                YouTube.player(videoId, playlistId, client).getOrNull()
             if (playerResponse?.playabilityStatus?.status == "OK") {
                 streamPlayerResponse = playerResponse
-            }
-        }
-        if (streamPlayerResponse == null) { // use IOS client as fallback
-            val playerResponse = YouTube.player(videoId, playlistId, client = IOS).getOrNull()
-            if (playerResponse?.playabilityStatus?.status == "OK") {
-                streamPlayerResponse = playerResponse
-            }
-        }
-        if (streamPlayerResponse == null) { // use TVHTML5 client as fallback
-            val playerResponse = YouTube.player(videoId, playlistId, client = TVHTML5).getOrNull()
-            if (playerResponse?.playabilityStatus?.status == "OK") {
-                streamPlayerResponse = playerResponse
+                break
             }
         }
 

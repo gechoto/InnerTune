@@ -10,7 +10,7 @@ import com.zionhuang.innertube.models.response.PlayerResponse
 import com.zionhuang.music.constants.AudioQuality
 import com.zionhuang.music.db.entities.FormatEntity
 
-object YouTubeUtils {
+object YouTubePlayerUtils {
     /**
      * The main client is used for metadata.
      * Do not use other clients for this because it can result in inconsistent metadata.

@@ -20,7 +20,7 @@ import com.zionhuang.music.db.MusicDatabase
 import com.zionhuang.music.db.entities.FormatEntity
 import com.zionhuang.music.di.DownloadCache
 import com.zionhuang.music.di.PlayerCache
-import com.zionhuang.music.utils.YouTubePlayerUtils
+import com.zionhuang.music.utils.YTPlayerUtils
 import com.zionhuang.music.utils.enumPreference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +70,7 @@ class DownloadUtil @Inject constructor(
 
         val playedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
         val (playerResponse, format) = runBlocking(Dispatchers.IO) {
-            YouTubePlayerUtils.playerResponseForPlayback(
+            YTPlayerUtils.playerResponseForPlayback(
                 mediaId,
                 playedFormat = playedFormat,
                 audioQuality = audioQuality,

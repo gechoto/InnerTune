@@ -99,7 +99,7 @@ import com.zionhuang.music.playback.queues.YouTubeQueue
 import com.zionhuang.music.playback.queues.filterExplicit
 import com.zionhuang.music.utils.CoilBitmapLoader
 import com.zionhuang.music.utils.DiscordRPC
-import com.zionhuang.music.utils.YouTubePlayerUtils
+import com.zionhuang.music.utils.YTPlayerUtils
 import com.zionhuang.music.utils.dataStore
 import com.zionhuang.music.utils.enumPreference
 import com.zionhuang.music.utils.get
@@ -406,7 +406,7 @@ class MusicService : MediaLibraryService(),
         } ?: return
         val duration = song?.song?.duration?.takeIf { it != -1 }
             ?: mediaMetadata.duration.takeIf { it != -1 }
-            ?: (playerResponse ?: YouTubePlayerUtils.playerResponseForMetadata(mediaId).getOrNull())?.videoDetails?.lengthSeconds?.toInt()
+            ?: (playerResponse ?: YTPlayerUtils.playerResponseForMetadata(mediaId).getOrNull())?.videoDetails?.lengthSeconds?.toInt()
             ?: -1
         database.query {
             if (song == null) insert(mediaMetadata.copy(duration = duration))
@@ -640,7 +640,7 @@ class MusicService : MediaLibraryService(),
             // There may be inconsistent between the downloaded file and the displayed info if user change audio quality frequently
             val playedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
             val (playerResponse, format) = runBlocking(Dispatchers.IO) {
-                YouTubePlayerUtils.playerResponseForPlayback(
+                YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
                     playedFormat = playedFormat,
                     audioQuality = audioQuality,

@@ -11,7 +11,7 @@ import com.zionhuang.music.constants.AudioQuality
 import com.zionhuang.music.db.entities.FormatEntity
 import okhttp3.OkHttpClient
 
-object YouTubePlayerUtils {
+object YTPlayerUtils {
 
     private val httpClient = OkHttpClient.Builder().build()
 

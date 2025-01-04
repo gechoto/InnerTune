@@ -640,7 +640,7 @@ class MusicService : MediaLibraryService(),
             // There may be inconsistent between the downloaded file and the displayed info if user change audio quality frequently
             val playedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
             val (playerResponse, format) = runBlocking(Dispatchers.IO) {
-                YouTubePlayerUtils.playerResponseWithFormat(
+                YouTubePlayerUtils.playerResponseForPlayback(
                     mediaId,
                     playedFormat = playedFormat,
                     audioQuality = audioQuality,

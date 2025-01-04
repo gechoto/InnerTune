@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 import org.schabi.newpipe.extractor.services.youtube.YoutubeJavaScriptPlayerManager
 
 /**
- * PlayerResponse with [com.zionhuang.innertube.models.YouTubeClient.ANDROID_MUSIC] client
+ * PlayerResponse with [com.zionhuang.innertube.models.YouTubeClient.WEB_REMIX] client
  */
 @Serializable
 data class PlayerResponse(
@@ -94,3 +94,13 @@ data class PlayerResponse(
         val thumbnail: Thumbnails,
     )
 }
+
+/**
+ * Variation of [PlayerResponse] with only some metadata but no streams
+ */
+@Serializable
+data class MetadataOnlyPlayerResponse(
+    val playabilityStatus: PlayerResponse.PlayabilityStatus,
+    val playerConfig: PlayerResponse.PlayerConfig?,
+    val videoDetails: PlayerResponse.VideoDetails?,
+)

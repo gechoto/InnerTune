@@ -20,6 +20,7 @@ import com.zionhuang.music.db.MusicDatabase
 import com.zionhuang.music.db.entities.FormatEntity
 import com.zionhuang.music.di.DownloadCache
 import com.zionhuang.music.di.PlayerCache
+import com.zionhuang.music.utils.YouTubeUtils
 import com.zionhuang.music.utils.enumPreference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -68,27 +69,17 @@ class DownloadUtil @Inject constructor(
         }
 
         val playedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
-        val playerResponse = runBlocking(Dispatchers.IO) {
-            YouTube.player(mediaId)
+        val (playerResponse, format) = runBlocking(Dispatchers.IO) {
+            YouTubeUtils.playerResponseWithFormat(
+                mediaId,
+                playedFormat = playedFormat,
+                audioQuality = audioQuality,
+                connectivityManager = connectivityManager,
+            )
         }.getOrThrow()
         if (playerResponse.playabilityStatus.status != "OK") {
             throw PlaybackException(playerResponse.playabilityStatus.reason, null, PlaybackException.ERROR_CODE_REMOTE_ERROR)
         }
-
-        val format =
-            if (playedFormat != null) {
-                playerResponse.streamingData?.adaptiveFormats?.find { it.itag == playedFormat.itag }
-            } else {
-                playerResponse.streamingData?.adaptiveFormats
-                    ?.filter { it.isAudio }
-                    ?.maxByOrNull {
-                        it.bitrate * when (audioQuality) {
-                            AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
-                            AudioQuality.HIGH -> 1
-                            AudioQuality.LOW -> -1
-                        } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
-                    }
-            }!!
 
         database.query {
             upsert(

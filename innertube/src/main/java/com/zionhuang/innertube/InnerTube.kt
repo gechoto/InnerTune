@@ -123,8 +123,12 @@ class InnerTube {
         client: YouTubeClient,
         videoId: String,
         playlistId: String?,
+        metadataOnly: Boolean
     ) = httpClient.post("player") {
         ytClient(client, setLogin = true)
+        if (metadataOnly) {
+            parameter("\$fields", "playabilityStatus,playerConfig,videoDetails")
+        }
         setBody(
             PlayerBody(
                 context = client.toContext(locale, visitorData).let {
@@ -147,11 +151,6 @@ class InnerTube {
             )
         )
     }
-
-    suspend fun pipedStreams(videoId: String) =
-        httpClient.get("https://pipedapi.kavin.rocks/streams/${videoId}") {
-            contentType(ContentType.Application.Json)
-        }
 
     suspend fun browse(
         client: YouTubeClient,

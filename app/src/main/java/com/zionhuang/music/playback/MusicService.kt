@@ -406,7 +406,7 @@ class MusicService : MediaLibraryService(),
         } ?: return
         val duration = song?.song?.duration?.takeIf { it != -1 }
             ?: mediaMetadata.duration.takeIf { it != -1 }
-            ?: (playerResponse?.videoDetails ?: YouTubeUtils.playerMetadataOnly(mediaId).getOrNull()?.videoDetails)?.lengthSeconds?.toInt()
+            ?: (playerResponse ?: YouTubeUtils.playerResponseForMetadata(mediaId).getOrNull())?.videoDetails?.lengthSeconds?.toInt()
             ?: -1
         database.query {
             if (song == null) insert(mediaMetadata.copy(duration = duration))

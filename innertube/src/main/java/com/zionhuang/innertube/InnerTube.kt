@@ -123,12 +123,8 @@ class InnerTube {
         client: YouTubeClient,
         videoId: String,
         playlistId: String?,
-        metadataOnly: Boolean
     ) = httpClient.post("player") {
         ytClient(client, setLogin = true)
-        if (metadataOnly) {
-            parameter("\$fields", "playabilityStatus,playerConfig,videoDetails")
-        }
         setBody(
             PlayerBody(
                 context = client.toContext(locale, visitorData).let {

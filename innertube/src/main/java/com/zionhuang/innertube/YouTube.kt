@@ -23,7 +23,6 @@ import com.zionhuang.innertube.models.response.BrowseResponse
 import com.zionhuang.innertube.models.response.GetQueueResponse
 import com.zionhuang.innertube.models.response.GetSearchSuggestionsResponse
 import com.zionhuang.innertube.models.response.GetTranscriptResponse
-import com.zionhuang.innertube.models.response.MetadataOnlyPlayerResponse
 import com.zionhuang.innertube.models.response.NextResponse
 import com.zionhuang.innertube.models.response.PlayerResponse
 import com.zionhuang.innertube.models.response.SearchResponse
@@ -432,17 +431,8 @@ object YouTube {
             }
     }
 
-    suspend fun player(videoId: String, playlistId: String? = null, client: YouTubeClient = WEB_REMIX): Result<PlayerResponse> = runCatching {
-        innerTube.player(client, videoId, playlistId, metadataOnly = false).body<PlayerResponse>()
-    }
-
-    suspend fun playerMetadataOnly(videoId: String, playlistId: String? = null, client: YouTubeClient = WEB_REMIX): Result<MetadataOnlyPlayerResponse> = runCatching {
-        val playerResponse = innerTube.player(client, videoId, playlistId, metadataOnly = true).body<PlayerResponse>()
-        MetadataOnlyPlayerResponse(
-            playabilityStatus = playerResponse.playabilityStatus,
-            playerConfig = playerResponse.playerConfig,
-            videoDetails = playerResponse.videoDetails,
-        )
+    suspend fun player(videoId: String, playlistId: String? = null, client: YouTubeClient): Result<PlayerResponse> = runCatching {
+        innerTube.player(client, videoId, playlistId).body<PlayerResponse>()
     }
 
     suspend fun next(endpoint: WatchEndpoint, continuation: String? = null): Result<NextResult> = runCatching {

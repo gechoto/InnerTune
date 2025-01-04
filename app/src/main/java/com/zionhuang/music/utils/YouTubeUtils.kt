@@ -6,7 +6,6 @@ import com.zionhuang.innertube.models.YouTubeClient
 import com.zionhuang.innertube.models.YouTubeClient.Companion.IOS
 import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB_CREATOR
 import com.zionhuang.innertube.models.YouTubeClient.Companion.WEB_REMIX
-import com.zionhuang.innertube.models.response.MetadataOnlyPlayerResponse
 import com.zionhuang.innertube.models.response.PlayerResponse
 import com.zionhuang.music.constants.AudioQuality
 import com.zionhuang.music.db.entities.FormatEntity
@@ -65,11 +64,11 @@ object YouTubeUtils {
         )
     }
 
-    suspend fun playerMetadataOnly(
+    suspend fun playerResponseForMetadata(
         videoId: String,
         playlistId: String? = null,
-    ): Result<MetadataOnlyPlayerResponse> =
-        YouTube.playerMetadataOnly(videoId, playlistId, client = MAIN_CLIENT)
+    ): Result<PlayerResponse> =
+        YouTube.player(videoId, playlistId, client = MAIN_CLIENT)
 
     private fun findFormat(
         playerResponse: PlayerResponse,

@@ -94,13 +94,3 @@ data class PlayerResponse(
         val thumbnail: Thumbnails,
     )
 }
-
-/**
- * Variation of [PlayerResponse] with only some metadata but no streams
- */
-@Serializable
-data class MetadataOnlyPlayerResponse(
-    val playabilityStatus: PlayerResponse.PlayabilityStatus,
-    val playerConfig: PlayerResponse.PlayerConfig?,
-    val videoDetails: PlayerResponse.VideoDetails?,
-)

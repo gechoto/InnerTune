@@ -62,10 +62,15 @@ data class PlayerResponse(
             val lastModified: Long?,
             val signatureCipher: String?,
         ) {
+            private var cachedDeobfuscatedUrl: String? = null
+
             val isAudio: Boolean
                 get() = width == null
 
             fun findUrl(): String? {
+                this.cachedDeobfuscatedUrl?.let {
+                    return it
+                }
                 this.url?.let {
                     return it
                 }
@@ -75,7 +80,8 @@ data class PlayerResponse(
                     val signatureParam = params["sp"] ?: return null
                     val url = params["url"]?.let { URLBuilder(it) } ?: return null
                     url.parameters[signatureParam] = YoutubeJavaScriptPlayerManager.deobfuscateSignature("", obfuscatedSignature)
-                    return YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated("", url.toString())
+                    this.cachedDeobfuscatedUrl = YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated("", url.toString())
+                    return this.cachedDeobfuscatedUrl
                 }
                 return null
             }

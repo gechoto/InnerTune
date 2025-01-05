@@ -1,6 +1,7 @@
 package com.zionhuang.music.utils
 
 import android.net.ConnectivityManager
+import androidx.media3.common.PlaybackException
 import com.zionhuang.innertube.YouTube
 import com.zionhuang.innertube.models.YouTubeClient
 import com.zionhuang.innertube.models.YouTubeClient.Companion.IOS
@@ -31,8 +32,18 @@ object YTPlayerUtils {
      */
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(WEB_CREATOR, IOS)
 
+    data class PlaybackData(
+        val audioConfig: PlayerResponse.PlayerConfig.AudioConfig?,
+        val videoDetails: PlayerResponse.VideoDetails?,
+        val format: PlayerResponse.StreamingData.Format,
+        val streamUrl: String,
+        val streamExpiresInSeconds: Int,
+    )
+
     /**
-     * Player response and format intended to use for playback.
+     * Custom player response intended to use for playback.
+     * Metadata like audioConfig and videoDetails are from [MAIN_CLIENT].
+     * Format & stream can be from [MAIN_CLIENT] or [STREAM_FALLBACK_CLIENTS].
      */
     suspend fun playerResponseForPlayback(
         videoId: String,
@@ -40,67 +51,93 @@ object YTPlayerUtils {
         playedFormat: FormatEntity?,
         audioQuality: AudioQuality,
         connectivityManager: ConnectivityManager,
-    ): Result<Pair<PlayerResponse, PlayerResponse.StreamingData.Format>> = runCatching {
+    ): Result<PlaybackData> = runCatching {
         val mainPlayerResponse =
             YouTube.player(videoId, playlistId, client = MAIN_CLIENT).getOrThrow()
 
-        var format: PlayerResponse.StreamingData.Format? = findFormat(
-            mainPlayerResponse,
-            playedFormat,
-            audioQuality,
-            connectivityManager,
-        )
+        val audioConfig = mainPlayerResponse.playerConfig?.audioConfig
+        val videoDetails = mainPlayerResponse.videoDetails
 
-        var streamUrl = format?.findUrl()
-        if (streamUrl != null && validateStatus(streamUrl)) {
-            Pair(
+        var format: PlayerResponse.StreamingData.Format? = null
+        var streamUrl: String? = null
+        var streamExpiresInSeconds: Int? = null
+
+        if (mainPlayerResponse.playabilityStatus.status == "OK") {
+            format = findFormat(
                 mainPlayerResponse,
-                format,
+                playedFormat,
+                audioQuality,
+                connectivityManager,
             )
-        }
-
-        var streamPlayerResponse: PlayerResponse? = null
-        for (client in STREAM_FALLBACK_CLIENTS) {
-            streamPlayerResponse =
-                YouTube.player(videoId, playlistId, client).getOrNull()
-            if (streamPlayerResponse?.playabilityStatus?.status == "OK") {
-                format =
-                    findFormat(
-                        streamPlayerResponse,
-                        playedFormat,
-                        audioQuality,
-                        connectivityManager,
+            if (format != null) {
+                streamUrl = format.findUrl()
+                streamExpiresInSeconds = mainPlayerResponse.streamingData?.expiresInSeconds
+                if (streamUrl != null && streamExpiresInSeconds != null && validateStatus(streamUrl)) {
+                    return@runCatching PlaybackData(
+                        audioConfig,
+                        videoDetails,
+                        format,
+                        streamUrl,
+                        streamExpiresInSeconds,
                     )
-                streamUrl = format?.findUrl() ?: continue
-                if (validateStatus(streamUrl)) {
-                    break
                 }
-            } else {
-                streamPlayerResponse = null
-                format = null
             }
         }
 
-        if (streamPlayerResponse == null) {
-            throw Exception("Bad stream player response")
+        var fallbackPlayerResponse: PlayerResponse? = null
+        for (client in STREAM_FALLBACK_CLIENTS) {
+            // reset for each client
+            format = null
+            streamUrl = null
+            streamExpiresInSeconds = null
+
+            // process current client response
+            fallbackPlayerResponse =
+                YouTube.player(videoId, playlistId, client).getOrNull()
+            if (fallbackPlayerResponse?.playabilityStatus?.status == "OK") {
+                format =
+                    findFormat(
+                        fallbackPlayerResponse,
+                        playedFormat,
+                        audioQuality,
+                        connectivityManager,
+                    ) ?: continue
+                streamUrl = format.findUrl() ?: continue
+                streamExpiresInSeconds = fallbackPlayerResponse.streamingData?.expiresInSeconds ?: continue
+
+                if (validateStatus(streamUrl)) {
+                    // working stream found
+                    break
+                }
+            }
+        }
+
+        if (fallbackPlayerResponse == null) {
+            throw Exception("Bad fallback player response")
+        }
+        if (fallbackPlayerResponse.playabilityStatus.status != "OK") {
+            throw PlaybackException(
+                fallbackPlayerResponse.playabilityStatus.reason,
+                null,
+                PlaybackException.ERROR_CODE_REMOTE_ERROR
+            )
+        }
+        if (streamExpiresInSeconds == null) {
+            throw Exception("Missing stream expire time")
         }
         if (format == null) {
             throw Exception("Could not find format")
         }
+        if (streamUrl == null) {
+            throw Exception("Could not find stream url")
+        }
 
-        Pair(
-            mainPlayerResponse.copy(
-                // This does not really do anything because if playabilityStatus is not OK
-                // it will set streamPlayerResponse to null and return above
-                // This should be changed to return the streamPlayerResponse
-                // of the last client used even if it is not OK
-                playabilityStatus = streamPlayerResponse.playabilityStatus,
-                // This is currently not used and there is no reason to use it
-                // the format is already returned separately
-                // so streamingData does not really matter and can probably be removed
-                streamingData = streamPlayerResponse.streamingData,
-            ),
+        PlaybackData(
+            audioConfig,
+            videoDetails,
             format,
+            streamUrl,
+            streamExpiresInSeconds,
         )
     }
 

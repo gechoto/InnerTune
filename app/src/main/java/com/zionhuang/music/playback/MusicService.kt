@@ -399,14 +399,14 @@ class MusicService : MediaLibraryService(),
         )
     }
 
-    private suspend fun recoverSong(mediaId: String, playerResponse: PlayerResponse? = null) {
+    private suspend fun recoverSong(mediaId: String, videoDetails: PlayerResponse.VideoDetails? = null) {
         val song = database.song(mediaId).first()
         val mediaMetadata = withContext(Dispatchers.Main) {
             player.findNextMediaItemById(mediaId)?.metadata
         } ?: return
         val duration = song?.song?.duration?.takeIf { it != -1 }
             ?: mediaMetadata.duration.takeIf { it != -1 }
-            ?: (playerResponse ?: YTPlayerUtils.playerResponseForMetadata(mediaId).getOrNull())?.videoDetails?.lengthSeconds?.toInt()
+            ?: (videoDetails ?: YTPlayerUtils.playerResponseForMetadata(mediaId).getOrNull()?.videoDetails)?.lengthSeconds?.toInt()
             ?: -1
         database.query {
             if (song == null) insert(mediaMetadata.copy(duration = duration))
@@ -639,7 +639,7 @@ class MusicService : MediaLibraryService(),
             // Check whether format exists so that users from older version can view format details
             // There may be inconsistent between the downloaded file and the displayed info if user change audio quality frequently
             val playedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
-            val (playerResponse, format) = runBlocking(Dispatchers.IO) {
+            val playbackData = runBlocking(Dispatchers.IO) {
                 YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
                     playedFormat = playedFormat,
@@ -648,6 +648,8 @@ class MusicService : MediaLibraryService(),
                 )
             }.getOrElse { throwable ->
                 when (throwable) {
+                    is PlaybackException -> throw throwable
+
                     is ConnectException, is UnknownHostException -> {
                         throw PlaybackException(getString(R.string.error_no_internet), throwable, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
                     }
@@ -659,9 +661,7 @@ class MusicService : MediaLibraryService(),
                     else -> throw PlaybackException(getString(R.string.error_unknown), throwable, PlaybackException.ERROR_CODE_REMOTE_ERROR)
                 }
             }
-            if (playerResponse.playabilityStatus.status != "OK") {
-                throw PlaybackException(playerResponse.playabilityStatus.reason, null, PlaybackException.ERROR_CODE_REMOTE_ERROR)
-            }
+            val format = playbackData.format
 
             database.query {
                 upsert(
@@ -673,15 +673,15 @@ class MusicService : MediaLibraryService(),
                         bitrate = format.bitrate,
                         sampleRate = format.audioSampleRate,
                         contentLength = format.contentLength!!,
-                        loudnessDb = playerResponse.playerConfig?.audioConfig?.loudnessDb
+                        loudnessDb = playbackData.audioConfig?.loudnessDb
                     )
                 )
             }
-            scope.launch(Dispatchers.IO) { recoverSong(mediaId, playerResponse) }
+            scope.launch(Dispatchers.IO) { recoverSong(mediaId, playbackData.videoDetails) }
 
-            val streamUrl = format.findUrl()
+            val streamUrl = playbackData.streamUrl
 
-            songUrlCache[mediaId] = streamUrl!! to playerResponse.streamingData!!.expiresInSeconds * 1000L
+            songUrlCache[mediaId] = streamUrl to playbackData.streamExpiresInSeconds * 1000L
             dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
         }
     }
